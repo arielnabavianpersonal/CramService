@@ -1,0 +1,14 @@
+{
+  "name": "infrastructure",
+  "version": "1.0.0",
+  "scripts": {
+    "cdk": "cdk"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "aws-cdk": "^2.1031.2",
+    "aws-cdk-lib": "^2.224.0",
+    "constructs": "^10.0.0",
+    "typescript": "^5.0.0"
+  }
+}

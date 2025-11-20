@@ -1,0 +1,26 @@
+# CDK
+cdk.out/
+.cdk.staging/
+cdk.context.json
+
+# Java
+target/
+*.class
+*.jar
+*.war
+*.ear
+.classpath
+.project
+.settings/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
