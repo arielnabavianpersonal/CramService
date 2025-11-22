@@ -42,7 +42,13 @@ export class ApiServiceStack extends cdk.Stack {
 
     const integration = new apigateway.LambdaIntegration(apiLambda);
     
-    // Add proxy for all paths
+    // Secure the root path
+    api.root.addMethod('ANY', integration, {
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizer: authorizer,
+    });
+    
+    // Add proxy for all other paths
     api.root.addProxy({
       defaultIntegration: integration,
       anyMethod: true,
@@ -50,12 +56,6 @@ export class ApiServiceStack extends cdk.Stack {
         authorizationType: apigateway.AuthorizationType.COGNITO,
         authorizer: authorizer,
       },
-    });
-
-    // Secure the root path as well
-    api.root.addMethod('ANY', integration, {
-      authorizationType: apigateway.AuthorizationType.COGNITO,
-      authorizer: authorizer,
     });
   }
 }
