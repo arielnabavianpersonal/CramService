@@ -53,4 +53,4 @@ jobs:
       - name: Deploy Infrastructure
         run: |
           cd infrastructure
-          npx cdk deploy --require-approval never
+          npx cdk deploy --all --require-approval never
