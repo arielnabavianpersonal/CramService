@@ -1,10 +1,15 @@
 import * as cdk from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
 import { Construct } from 'constructs';
 
+export interface ApiServiceStackProps extends cdk.StackProps {
+  userPool: cognito.UserPool;
+}
+
 export class ApiServiceStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props: ApiServiceStackProps) {
     super(scope, id, props);
 
     const apiLambda = new lambda.Function(this, 'ApiHandler', {
@@ -21,6 +26,18 @@ export class ApiServiceStack extends cdk.Stack {
       deployOptions: {
         stageName: 'prod',
       },
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowMethods: apigateway.Cors.ALL_METHODS,
+        allowHeaders: ['Content-Type', 'Authorization'],
+      },
+    });
+
+    // Create Cognito Authorizer
+    const authorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'CognitoAuthorizer', {
+      cognitoUserPools: [props.userPool],
+      authorizerName: 'CramCognitoAuthorizer',
+      identitySource: 'method.request.header.Authorization',
     });
 
     const integration = new apigateway.LambdaIntegration(apiLambda);
@@ -28,7 +45,8 @@ export class ApiServiceStack extends cdk.Stack {
       defaultIntegration: integration,
       anyMethod: true,
       defaultMethodOptions: {
-        authorizationType: apigateway.AuthorizationType.IAM,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        authorizer: authorizer,
       },
     });
   }
