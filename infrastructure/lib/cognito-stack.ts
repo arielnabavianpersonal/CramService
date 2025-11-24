@@ -92,7 +92,7 @@ export class CognitoStack extends cdk.Stack {
         ],
         logoutUrls: [
           'http://localhost:3000',
-          'https://cram-ai.com/',
+          'https://cram-ai.com',
         ],
       },
       supportedIdentityProviders: [
