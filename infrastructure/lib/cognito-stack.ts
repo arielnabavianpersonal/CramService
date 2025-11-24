@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as certificatemanager from 'aws-cdk-lib/aws-certificatemanager';
 import { Construct } from 'constructs';
 
 export class CognitoStack extends cdk.Stack {
@@ -103,10 +104,19 @@ export class CognitoStack extends cdk.Stack {
     // Ensure the Google provider is created before the client
     this.userPoolClient.node.addDependency(googleProvider);
 
-    // Create User Pool Domain
-    const domain = this.userPool.addDomain('CramUserPoolDomain', {
-      cognitoDomain: {
-        domainPrefix: `cram-${cdk.Stack.of(this).account}`,
+    // Import the ACM certificate for the custom domain
+    const certificate = certificatemanager.Certificate.fromCertificateArn(
+      this,
+      'CognitoDomainCertificate',
+      'arn:aws:acm:us-east-1:529088301024:certificate/15f7dc88-718b-463e-a517-bcc9feb27e1c'
+    );
+
+    // Create Custom Domain for User Pool
+    const customDomain = this.userPool.addDomain('CramUserPoolCustomDomain', {
+      managedLoginVersion: cognito.ManagedLoginVersion.NEWER_MANAGED_LOGIN,
+      customDomain: {
+        domainName: 'login.cram-ai.com',
+        certificate: certificate,
       },
     });
   }
