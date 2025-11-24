@@ -111,13 +111,12 @@ export class CognitoStack extends cdk.Stack {
       'arn:aws:acm:us-east-1:529088301024:certificate/15f7dc88-718b-463e-a517-bcc9feb27e1c'
     );
 
-    // Create Custom Domain for User Pool
-    const customDomain = this.userPool.addDomain('CramUserPoolCustomDomain', {
-      managedLoginVersion: cognito.ManagedLoginVersion.NEWER_MANAGED_LOGIN,
+    // Create Custom Domain for User Pool with Managed Login
+    this.userPool.addDomain('CramUserPoolCustomDomain', {
       customDomain: {
         domainName: 'login.cram-ai.com',
         certificate: certificate,
-      },
+      }
     });
   }
 }
