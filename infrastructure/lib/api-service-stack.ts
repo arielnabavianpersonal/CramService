@@ -2,10 +2,12 @@ import * as cdk from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
 
 export interface ApiServiceStackProps extends cdk.StackProps {
   userPool: cognito.UserPool;
+  cramTable: dynamodb.Table;
 }
 
 export class ApiServiceStack extends cdk.Stack {
@@ -18,7 +20,13 @@ export class ApiServiceStack extends cdk.Stack {
       code: lambda.Code.fromAsset('../service/target/lambda-service-1.0.0.jar'),
       memorySize: 512,
       timeout: cdk.Duration.seconds(30),
+      environment: {
+        TABLE_NAME: props.cramTable.tableName,
+      },
     });
+
+    // Grant Lambda permissions to read/write to DynamoDB table
+    props.cramTable.grantReadWriteData(apiLambda);
 
     const api = new apigateway.RestApi(this, 'ApiGateway', {
       restApiName: 'Service API',
