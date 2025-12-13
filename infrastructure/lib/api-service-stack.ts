@@ -19,7 +19,10 @@ export class ApiServiceStack extends cdk.Stack {
       handler: 'com.example.ApiHandler::handleRequest',
       code: lambda.Code.fromAsset('../service/target/lambda-service-1.0.0.jar'),
       memorySize: 512,
-      timeout: cdk.Duration.seconds(30)
+      timeout: cdk.Duration.seconds(30),
+      environment: {
+        TABLE_NAME: props.cramTable.tableName,
+      },
     });
 
     // Grant Lambda permissions to read/write to DynamoDB table
