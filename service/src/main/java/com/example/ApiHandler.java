@@ -25,6 +25,11 @@ public class ApiHandler implements RequestHandler<APIGatewayProxyRequestEvent, A
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
         try {
+            // Handle OPTIONS request for CORS preflight
+            if ("OPTIONS".equals(request.getHttpMethod())) {
+                return createCorsResponse(200, "{}");
+            }
+            
             // Extract userId (sub claim) from Cognito JWT
             String userId = extractUserIdFromCognito(request);
             
@@ -45,10 +50,7 @@ public class ApiHandler implements RequestHandler<APIGatewayProxyRequestEvent, A
             response.put("method", method);
             response.put("itemCount", items.size());
             
-            return new APIGatewayProxyResponseEvent()
-                    .withStatusCode(200)
-                    .withHeaders(Map.of("Content-Type", "application/json"))
-                    .withBody(gson.toJson(response));
+            return createCorsResponse(200, gson.toJson(response));
                     
         } catch (Exception e) {
             context.getLogger().log("Error: " + e.getMessage());
@@ -98,11 +100,28 @@ public class ApiHandler implements RequestHandler<APIGatewayProxyRequestEvent, A
             response.items().get(0);
     }
 
+    private Map<String, String> getCorsHeaders() {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "application/json");
+        headers.put("Access-Control-Allow-Origin", "https://cram-ai.com");
+        headers.put("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        headers.put("Access-Control-Allow-Headers", "Content-Type, Authorization");
+        headers.put("Access-Control-Max-Age", "3600");
+        return headers;
+    }
+
+    private APIGatewayProxyResponseEvent createCorsResponse(int statusCode, String body) {
+        return new APIGatewayProxyResponseEvent()
+                .withStatusCode(statusCode)
+                .withHeaders(getCorsHeaders())
+                .withBody(body);
+    }
+
     private APIGatewayProxyResponseEvent createErrorResponse(int statusCode, String message) {
         Map<String, String> errorBody = Map.of("error", message);
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(statusCode)
-                .withHeaders(Map.of("Content-Type", "application/json"))
+                .withHeaders(getCorsHeaders())
                 .withBody(gson.toJson(errorBody));
     }
 }
