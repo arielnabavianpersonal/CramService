@@ -53,4 +53,4 @@ jobs:
       - name: Deploy Service (Hotswap)
         run: |
           cd infrastructure
-          npx cdk deploy --hotswap --require-approval never
+          npx cdk deploy --all --hotswap --require-approval never 
