@@ -25,18 +25,12 @@ public class ApiHandler implements RequestHandler<APIGatewayProxyRequestEvent, A
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
         try {
-            
-            // Extract userId (sub claim) from Cognito JWT
-            String userId = extractUserIdFromCognito(request);
-            
-            if (userId == null) {
-                return createErrorResponse(401, "Unauthorized: Missing or invalid user identity");
-            }
 
+            String userId = extractUserIdFromCognito(request);
+    
             String path = request.getPath();
             String method = request.getHttpMethod();
             
-            // Example: Query all items for this user
             Map<String, AttributeValue> items = queryUserPartition(userId);
             
             Map<String, Object> response = new HashMap<>();
@@ -61,14 +55,14 @@ public class ApiHandler implements RequestHandler<APIGatewayProxyRequestEvent, A
     private String extractUserIdFromCognito(APIGatewayProxyRequestEvent request) {
         if (request.getRequestContext() == null || 
             request.getRequestContext().getAuthorizer() == null) {
-            return null;
+            throw new RuntimeException("Missing authorizer context");
         }
         
         Map<String, Object> authorizer = request.getRequestContext().getAuthorizer();
         Map<String, Object> claims = (Map<String, Object>) authorizer.get("claims");
         
         if (claims == null) {
-            return null;
+            throw new RuntimeException("Missing claims in authorizer context");
         }
         
         // The 'sub' claim is the unique, immutable Cognito user ID
