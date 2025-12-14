@@ -25,10 +25,6 @@ public class ApiHandler implements RequestHandler<APIGatewayProxyRequestEvent, A
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
         try {
-            // Handle OPTIONS request for CORS preflight
-            if ("OPTIONS".equals(request.getHttpMethod())) {
-                return createCorsResponse(200, "{}");
-            }
             
             // Extract userId (sub claim) from Cognito JWT
             String userId = extractUserIdFromCognito(request);
