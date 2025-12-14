@@ -4,47 +4,42 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.google.gson.Gson;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.model.*;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public class ApiHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     
-    private final Gson gson = new Gson();
-    private final DynamoDbClient dynamoDb;
-    private final String tableName;
+    private final ContentHandler contentHandler;
+    private final ResponseHelper responseHelper;
 
     public ApiHandler() {
-        this.dynamoDb = DynamoDbClient.create();
-        this.tableName = System.getenv("TABLE_NAME");
+        DynamoDbClient dynamoDb = DynamoDbClient.create();
+        String tableName = System.getenv("TABLE_NAME");
+        DynamoDbService dynamoDbService = new DynamoDbService(dynamoDb, tableName);
+        this.responseHelper = new ResponseHelper();
+        this.contentHandler = new ContentHandler(dynamoDbService, responseHelper);
     }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
         try {
-
             String userId = extractUserIdFromCognito(request);
-    
             String path = request.getPath();
             String method = request.getHttpMethod();
             
-            Map<String, AttributeValue> items = queryUserPartition(userId);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("message", "Successfully accessed user partition");
-            response.put("userId", userId);
-            response.put("path", path);
-            response.put("method", method);
-            response.put("itemCount", items.size());
-            
-            return createCorsResponse(200, gson.toJson(response));
+            // Route based on path and method
+            if (path.endsWith("/content") && "GET".equals(method)) {
+                return contentHandler.handleReadContent(userId, context);
+            } else if (path.endsWith("/content") && "POST".equals(method)) {
+                return contentHandler.handleWriteContent(userId, request, context);
+            } else {
+                return responseHelper.createErrorResponse(404, "Endpoint not found");
+            }
                     
         } catch (Exception e) {
             context.getLogger().log("Error: " + e.getMessage());
-            return createErrorResponse(500, "Internal server error: " + e.getMessage());
+            return responseHelper.createErrorResponse(500, "Internal server error: " + e.getMessage());
         }
     }
 
@@ -67,51 +62,5 @@ public class ApiHandler implements RequestHandler<APIGatewayProxyRequestEvent, A
         
         // The 'sub' claim is the unique, immutable Cognito user ID
         return (String) claims.get("sub");
-    }
-
-    /**
-     * Query all items in the user's partition.
-     * This demonstrates secure access - only items with this userId can be retrieved.
-     */
-    private Map<String, AttributeValue> queryUserPartition(String userId) {
-        QueryRequest queryRequest = QueryRequest.builder()
-                .tableName(tableName)
-                .keyConditionExpression("userId = :userId")
-                .expressionAttributeValues(Map.of(
-                    ":userId", AttributeValue.builder().s(userId).build()
-                ))
-                .build();
-
-        QueryResponse response = dynamoDb.query(queryRequest);
-        
-        // Return first item as example (or empty map if no items)
-        return response.items().isEmpty() ? 
-            new HashMap<>() : 
-            response.items().get(0);
-    }
-
-    private Map<String, String> getCorsHeaders() {
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Content-Type", "application/json");
-        headers.put("Access-Control-Allow-Origin", "https://cram-ai.com");
-        headers.put("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        headers.put("Access-Control-Allow-Headers", "Content-Type, Authorization");
-        headers.put("Access-Control-Max-Age", "3600");
-        return headers;
-    }
-
-    private APIGatewayProxyResponseEvent createCorsResponse(int statusCode, String body) {
-        return new APIGatewayProxyResponseEvent()
-                .withStatusCode(statusCode)
-                .withHeaders(getCorsHeaders())
-                .withBody(body);
-    }
-
-    private APIGatewayProxyResponseEvent createErrorResponse(int statusCode, String message) {
-        Map<String, String> errorBody = Map.of("error", message);
-        return new APIGatewayProxyResponseEvent()
-                .withStatusCode(statusCode)
-                .withHeaders(getCorsHeaders())
-                .withBody(gson.toJson(errorBody));
     }
 }
